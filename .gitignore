@@ -1,8 +1,8 @@
 #ignore executable files
-.exe
+*.exe
 
 #ignore windows debug files
-.pdb
+*.pdb
 
 #ignore the intermediate object files in the hidden .build directory
-./build
+.build/*
