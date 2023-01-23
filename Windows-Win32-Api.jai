@@ -15,6 +15,7 @@ HDC       :: HANDLE;
 HICON     :: HANDLE;
 HBRUSH    :: HANDLE;
 HCURSOR   :: HANDLE;
+HMENU     :: HANDLE;
 
 // Dynamic link library API
 GetModuleHandleW :: (module_name: *u16) -> HANDLE #foreign kernel32;
@@ -101,6 +102,19 @@ WS_EX_COMPOSITED        :: 0x02000000;
 WS_EX_NOACTIVATE        :: 0x08000000;
 
 // Window messages:
+POINT :: struct {
+	x,y: s32;
+}
+MSG :: struct {
+	hwnd:     HWND;
+	message:  u32;
+    wParam:   WPARAM;
+    lParam:   LPARAM;
+    time:     s32;
+    pt:       POINT;
+    lPrivate: s32; 
+}
+
 WM_NULL 	::0x0000;
 WM_CREATE 	:: 0x0001;
 WM_DESTROY 	:: 0x0002;
@@ -240,6 +254,15 @@ WM_EXITSIZEMOVE                 :: 0x0232;
 WM_DROPFILES                    :: 0x0233;
 WM_DPICHANGED                   :: 0x02E0;
 
+// PeekMessage flags
+PM_NOREMOVE :: 0x0000;
+PM_REMOVE   :: 0x0001;
+PM_NOYIELD  :: 0x0002;
+
+PeekMessageW     :: (msg: *MSG, hwnd: HWND, wMsgFilterMin: u32, wMsgFilterMax: u32, wRemoveMsg: u32) -> s32 #foreign user32;
+DispatchMessageW :: (msg: *MSG) -> s32 #foreign user32;
+TranslateMessage :: (msg: *MSG) -> s32 #foreign user32;
+
 RECT :: struct {
 	left, top, right, bottom: s32;
 }
@@ -250,10 +273,25 @@ BOOL :: enum s32 {
 }
 
 // Window procedures
-DefWindowProcW :: (hWnd: HWND, Msg: u32, wParam: WPARAM, lParam: LPARAM) -> s64 #foreign user32;
-InvalidateRect :: (hWnd: HWND, lpRect: *RECT, erase: BOOL ) -> BOOL #foreign user32;
-UpdateWindow   :: (hwnd: HWND) -> s32  #foreign user32;
-DestroyWindow  :: (hWnd: HWND) -> BOOL #foreign user32;
+CreateWindowExW :: (
+	 dwExStyle: s32
+	,lpClassName: *u16
+	,lpWindowName: *u16
+	,dwStyle: u32
+	,x: s32
+	,y: s32
+	,nWidth: s32
+	,nHeight: s32
+	,hwndParent: HWND
+	,hMenu: HMENU
+	,hInstance: HINSTANCE
+	,lpParam: *void
+) -> HWND #foreign user32;
+
+DefWindowProcW  :: (hWnd: HWND, Msg: u32, wParam: WPARAM, lParam: LPARAM) -> s64 #foreign user32;
+InvalidateRect  :: (hWnd: HWND, lpRect: *RECT, erase: BOOL ) -> BOOL #foreign user32;
+UpdateWindow    :: (hwnd: HWND) -> s32  #foreign user32;
+DestroyWindow   :: (hWnd: HWND) -> BOOL #foreign user32;
 
 // Window Cursors:
 IDC_APPSTARTING :: cast(*void) 32650;
