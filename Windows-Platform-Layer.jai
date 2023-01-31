@@ -4,25 +4,13 @@
 // Keyboard input is tied to the operating system as well.
 // Thus Image/Framebuffer and User Input types are added to this file.
 
+// Bookmarked but pertinent to these data structures: 
+// https://stackoverflow.com/questions/15194002/why-does-opengl-be-designed-as-a-state-machine-originally 
+
 Pixel :: struct {
 	// assumes simple RGBA format where each value is a byte
 	blue, green, red, alpha: u8;
 }
-
-// it's almost like using toggles
-// so in the D3D way you would have something like the object passed in and you set that state
-// i think this is what I am getting hung up on is how do you talk back and forth between these things
-
-// what Nicol is saying is that you could have a 'render-command' and that is what i am trying to do 
-// but then you have all these disparate object all over the place
-// the rendering call would literally look something like
-// render :: ( Shader1, shader2, texture1, texture2, texture..n, vertex data, framebuffer, viewport setting and blend settings )
-// so what the APIs do is make you set all of this up ahead of time 
-// if you want to render something else you just bind that piece in there and you are good to go
-// otherwise you would have to pass in all that state over again, which wouldn't be great especially if the only thing you change is the textures you use
-// make them immutable might be a good idea as well, you can't reallocate a texture with a new size/format or whatever, you need to recreate it 
-// this would make debugging a lot easier
-
 
 Swapchain :: struct {
 
