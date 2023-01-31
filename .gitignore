@@ -6,3 +6,6 @@
 
 #ignore the intermediate object files in the hidden .build directory
 .build/*
+
+#ignore any 'test' files I create for prototyping
+test.*
