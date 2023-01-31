@@ -5,30 +5,32 @@ main :: () {
 	window_width:  s32 = 600;
 	window_height: s32 = 400;
 
-	num_frame_buffers: int = 2;
+	success, window := Windows.create_window( 
+		 title    = "App-Window"
+		,width    = window_width
+		,height   = window_height
+		,callback = Windows.window_callback
+	);
 
-	window_class: Win32.WNDCLASSEXW;
-	Windows.init_window_class( *window_class, "App-Window-Class", Windows.window_callback );
+	if !success {
+		Basic.log_error( "Unable to create window\n" );
+		return;
+	}
 
-/*
-	window_user_data: Window_User_Data;
-	Windows.init_window_user_data( num_frame_buffers, user_input );
-*/
+	render_context: Windows.Render_Context;
+	Windows.init_render_context( *render_context, window );
 
-	window: Win32.HWND;
-	Windows.init_window( *window, window_class, "App-Window", window_width, window_height, null );
-
-	keep_window_open := true; // add this to the user data!
-	while keep_window_open {
-		window_messages: Win32.MSG;
-		while Win32.PeekMessageW( *window_messages, window, 0, 0, Win32.PM_REMOVE ) {
+	window_messages: Win32.MSG;
+	while window_messages.message != Win32.WM_QUIT {
+		if Win32.PeekMessageW( *window_messages, null, 0, 0, Win32.PM_REMOVE ) {
 			Win32.TranslateMessage( *window_messages );
-			Win32.DispatchMessageW(  *window_messages );
-
-			// update program state in here
-			// render into the frame buffer
+			Win32.DispatchMessageW( *window_messages );	
 		}
-	}	
+
+		Windows.draw_solid_color( *render_context ); 
+
+		Windows.display_frame( render_context );
+	}
 }
 
 #scope_file

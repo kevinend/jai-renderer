@@ -16,6 +16,23 @@ HICON     :: HANDLE;
 HBRUSH    :: HANDLE;
 HCURSOR   :: HANDLE;
 HMENU     :: HANDLE;
+HMONITOR  :: HANDLE;
+
+// on 32-bit platforms this is actually a signed 32-bit integer.
+LONG_PTR  :: s64;
+
+RECT :: struct {
+	left:   s32;
+	top:    s32; 
+	right:  s32;
+	bottom: s32;
+}
+
+BOOL :: enum s32 {
+	FALSE :: 0;
+	TRUE  :: 1;
+
+}
 
 // Dynamic link library API
 GetModuleHandleW :: (module_name: *u16) -> HANDLE #foreign kernel32;
@@ -262,15 +279,33 @@ PM_NOYIELD  :: 0x0002;
 PeekMessageW     :: (msg: *MSG, hwnd: HWND, wMsgFilterMin: u32, wMsgFilterMax: u32, wRemoveMsg: u32) -> s32 #foreign user32;
 DispatchMessageW :: (msg: *MSG) -> s32 #foreign user32;
 TranslateMessage :: (msg: *MSG) -> s32 #foreign user32;
+PostQuitMessage  :: (nExitcode: s64)   #foreign user32;
 
-RECT :: struct {
-	left, top, right, bottom: s32;
+CREATESTRUCTW :: struct {
+	lpCreateParams: *void;
+	hInstance: HINSTANCE;
+	hMenu: HMENU;    
+	hwndParent: HWND;        
+	cy:    s32;
+    cx:    s32;
+    y: 	   s32;
+    x: 	   s32;
+    style: s32;
+  	lpszName:  *u16;
+  	lpszClass: *u16;
+	dwExStyle:  u32;
 }
 
-BOOL :: enum s32 {
-	FALSE :: 0;
-	TRUE  :: 1;
-}
+// Window field offsets for GetWindowLongPtr()
+// some of these use GWL for the prefix while others use GWLP, not sure why.
+// https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getwindowlongptrw
+GWL_EXSTYLE			:: -20;
+GWLP_HINSTANCE		::  -6;
+GWLP_HWNDPARENT		::  -8;
+GWLP_ID				:: -12;
+GWL_STYLE			:: -16;
+GWLP_USERDATA		:: -21;
+GWLP_WNDPROC		::  -4;
 
 // Window procedures
 CreateWindowExW :: (
@@ -288,10 +323,44 @@ CreateWindowExW :: (
 	,lpParam: *void
 ) -> HWND #foreign user32;
 
+GetDC :: ( hWnd: HWND ) -> HDC #foreign user32;
+
+SetWindowLongPtrW :: (hWnd: HWND, nIndex: s32, dwNewLong: LONG_PTR ) -> LONG_PTR #foreign user32;
+GetWindowLongPtrW :: (hWnd: HWND, nIndex: s32) -> LONG_PTR #foreign user32; 
+
 DefWindowProcW  :: (hWnd: HWND, Msg: u32, wParam: WPARAM, lParam: LPARAM) -> s64 #foreign user32;
+GetClientRect   :: (hWnd: HWND, lpRect: *RECT) -> BOOL #foreign user32; 
+
 InvalidateRect  :: (hWnd: HWND, lpRect: *RECT, erase: BOOL ) -> BOOL #foreign user32;
 UpdateWindow    :: (hwnd: HWND) -> s32  #foreign user32;
+
 DestroyWindow   :: (hWnd: HWND) -> BOOL #foreign user32;
+
+// Windows Monitor Detection
+MONITORINFO :: struct {
+	cbSize: 	u32;
+	rcMonitor:  RECT;
+	rcWork:     RECT;
+	dwFlags:    u32;
+}
+
+CCHDEVICENAME: u32: 32;
+MONITORINFOEX :: struct {
+	// this struct inherits from the MONITORINFO class above.
+	// not sure if this type definition will work!
+	cbSize: 	u32;
+	rcMonitor:  RECT;
+	rcWork:     RECT;
+	dwFlags:    u32;
+	szDevice:   [CCHDEVICENAME] u8;	
+}
+
+MONITOR_DEFAULTTONULL    :: 0x00000000;
+MONITOR_DEFAULTTOPRIMARY :: 0x00000001;
+MONITOR_DEFAULTTONEAREST :: 0x00000002;
+
+MonitorFromPoint :: ( pt: POINT, dwFlags: u32 ) -> HMONITOR #foreign user32;
+GetMonitorInfoA  :: ( hMonitor: HMONITOR, lpmi: *MONITORINFO ) -> BOOL #foreign user32;
 
 // Window Cursors:
 IDC_APPSTARTING :: cast(*void) 32650;
@@ -348,9 +417,63 @@ BITMAPINFO :: struct {
 	bmiColors: [1] RGBQUAD;
 }
 
+DIBColors :: enum u32 {
+
+	DIB_RGB_COLORS  :: 0x00;
+   	DIB_PAL_COLORS  :: 0x01;
+   	DIB_PAL_INDICES :: 0x02;
+}
+
+// GDI raster operation codes (rop)
+SRCCOPY :: 0xcc0020;
+
+StretchDIBits :: (
+   hdc:   	  	HDC
+  ,xDest: 	  	s64
+  ,yDest: 	  	s64
+  ,destWidth: 	s64
+  ,destHeight: 	s64
+  ,xSrc: 		s64
+  ,ySrc:        s64
+  ,srcWidth: 	s64
+  ,srcHeight:	s64
+  ,lpBits:		*void
+  ,lpbmi:		*BITMAPINFO
+  ,iUsage:		DIBColors
+  ,rop:			u32	
+) -> s64 #foreign gdi32;
+
+SetDIBitsToDevice :: (
+   hdc: 	  HDC
+  ,xDest: 	  s64
+  ,yDest: 	  s64
+  ,w:     	  u32
+  ,h:     	  u32
+  ,xSrc:  	  s64
+  ,ySrc:  	  s64
+  ,startScan: u32
+  ,cLines:    u32
+  ,lpvBits:   *void
+  ,lpbmi:     *BITMAPINFO
+  ,colorUse:  DIBColors
+) -> s64 #foreign gdi32;
+
+// Windows paint types and procedures
+PAINTSTRUCT :: struct {
+ 	hdc: 	  	HDC; 
+  	fErase:   	BOOL;
+  	rcPaint:  	RECT;
+  	fRestore: 	BOOL;
+  	fIncUpdate: BOOL;
+  	rgbReserved: [32] u8;
+}
+
+BeginPaint :: ( hWnd: HWND, lpPaint: *PAINTSTRUCT ) -> HDC  #foreign user32;
+EndPaint   :: ( hWnd: HWND, lpPaint: *PAINTSTRUCT ) -> BOOL #foreign user32;
+
 #scope_file
 
-gdi      :: #system_library "gdi32";
+gdi32    :: #system_library "gdi32";
 kernel32 :: #system_library "kernel32";
 user32   :: #system_library "user32";
 
